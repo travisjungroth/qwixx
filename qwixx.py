@@ -65,9 +65,9 @@ class Dice(tuple[Die, ...]):
 
     def roller_takes(self) -> Iterable[Take]:
         color_map = {c: i for i, c in enumerate(ROW_COLORS)}
-        n = self.NON_GRID_COLORS
+        n = len(self.NON_GRID_COLORS)
         for w, c in zip(self[:n], self[n:]):
-            yield Take(color_map[c], w + c)
+            yield Take(color_map[c.color], w + c)
 
 
 @dataclass(frozen=True)
@@ -78,7 +78,9 @@ class Take:
     @classmethod
     def from_string(cls, s: str) -> Take:
         try:
-            return cls(Color(s[0]), int(s[1:]))
+            color = Color(s[0].upper())
+            row_id = ROW_COLORS.index(color)
+            return cls(row_id, int(s[1:]))
         except (KeyError, IndexError, ValueError):
             raise ValueError
 
@@ -179,12 +181,12 @@ class Card:
 
 class Player(Protocol):
     @abstractmethod
-    def take_turn(self, card: Card, dice: Dice, turns_to_roller: int, moves: Iterable[Move]) -> Move:
+    def take_turn(self, card: Card, dice: Dice, is_roller: bool, moves: Iterable[Move]) -> Move:
         pass
 
 
 class RandomPlayer(Player):
-    def take_turn(self, card: Card, dice: Dice, turns_to_roller: int, moves: Iterable[Move]) -> Move:
+    def take_turn(self, card: Card, dice: Dice, is_roller: bool, moves: Iterable[Move]) -> Move:
         return choice(list(moves))
 
 
@@ -192,13 +194,13 @@ class HumanPlayer(Player):
     def __init__(self, name):
         self.name = name
 
-    def take_turn(self, card: Card, dice: Dice, turns_to_roller: int, moves: Iterable[Move]) -> Move:
+    def take_turn(self, card: Card, dice: Dice, is_roller: bool, moves: Iterable[Move]) -> Move:
         moves = set(moves)
         print('\n' * 10)
         print(self.name)
         print(card)
         print(' '.join(map(str, dice)))
-        print('Watcher' if turns_to_roller else 'Roller')
+        print('Roller' if is_roller else 'Watcher')
         move = object()
         while move not in moves:
             s = input('Move: ')
@@ -239,7 +241,7 @@ class Game:
 
     def turn(self, player: Player, card: Card, takes: Iterable[Take]) -> None:
         moves = card.valid_moves(takes)
-        move = player.take_turn(card, self.dice, self.roller_id, moves)
+        move = player.take_turn(card, self.dice, self.roller is player, moves)
         if move is not None:
             card.apply_take(move)
 
@@ -271,4 +273,4 @@ class Game:
         return self.scores()
 
 
-# print(Game((HumanPlayer('Mars'), HumanPlayer('Travis'))).play())
+print(Game((HumanPlayer('Mars'), HumanPlayer('Travis'))).play())
