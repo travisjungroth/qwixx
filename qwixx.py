@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from itertools import accumulate, chain
 from random import choice, randrange
-from typing import ClassVar, Container, Iterable, Literal, Optional, Protocol
+from typing import ClassVar, Container, Final, Iterable, Optional, Protocol
 
 
 class Color(Enum):
@@ -33,11 +33,67 @@ class Color(Enum):
         return self.value
 
 
+ROW_COLORS: Final[tuple[Color, Color, Color, Color]] = (Color.RED, Color.YELLOW, Color.GREEN, Color.BLUE)
+
+
+@dataclass(frozen=True)
+class Die:
+    color: Color
+    face: int = field(default_factory=lambda: randrange(1, 7))
+
+    def __add__(self, other) -> int:
+        return self.face + other
+
+    def __radd__(self, other) -> int:
+        return other + self.face
+
+    def __str__(self):
+        return f'{self.color}{self.face}'
+
+
+class Dice(tuple[Die, ...]):
+    NON_GRID_COLORS: Final[tuple[Color, Color]] = (Color.WHITE, Color.WHITE)
+    COLORS: Final[tuple[Color, Color, Color, Color, Color, Color]] = NON_GRID_COLORS + ROW_COLORS
+
+    @classmethod
+    def roll(cls, locked: Container[int] = ()) -> Dice:
+        return Dice([Die(c) for c in cls.COLORS if c not in locked])
+
+    def table_takes(self) -> Iterable[Take]:
+        total = sum(self[:(len(self.NON_GRID_COLORS))])
+        return tuple((Take(i, total)) for i, _ in enumerate(ROW_COLORS))
+
+    def roller_takes(self) -> Iterable[Take]:
+        color_map = {c: i for i, c in enumerate(ROW_COLORS)}
+        n = self.NON_GRID_COLORS
+        for w, c in zip(self[:n], self[n:]):
+            yield Take(color_map[c], w + c)
+
+
+@dataclass(frozen=True)
+class Take:
+    row_id: int
+    spot: int
+
+    @classmethod
+    def from_string(cls, s: str) -> Take:
+        try:
+            return cls(Color(s[0]), int(s[1:]))
+        except (KeyError, IndexError, ValueError):
+            raise ValueError
+
+    def __str__(self):
+        return f"{ROW_COLORS[self.row_id]}{self.spot}"
+
+
+Move = Optional[Take]
+
+
 @dataclass
 class Row:
     spots: tuple[int, ...]
     marks: list[int] = field(default_factory=list)
-    LOCK_REQUIRES = 5
+    LOCK_REQUIRES: Final[int] = 5
 
     def __str__(self) -> str:
         line = []
@@ -74,15 +130,14 @@ class Row:
 
 
 class Grid(tuple[Row, Row, Row, Row]):
-    SPOTS = (range(2, 13), range(2, 13), range(12, 1, -1), range(12, 1, -1))
-    COLORS = (Color.RED, Color.YELLOW, Color.GREEN, Color.BLUE)
-    SCORES = tuple(accumulate(range(13)))
+    SPOTS: Final[tuple[range, ...]] = (range(2, 13), range(2, 13), range(12, 1, -1), range(12, 1, -1))
+    SCORES: Final[tuple[int, ...]] = tuple(accumulate(range(13)))
 
     def __new__(cls) -> Grid:
         return super().__new__(cls, map(Row, cls.SPOTS))
 
     def __str__(self) -> str:
-        return '\n'.join([f'{self.COLORS[i]}{row}' for i, row in enumerate(self)])
+        return '\n'.join([f'{ROW_COLORS[i]}{row}' for i, row in enumerate(self)])
 
     def valid_takes(self, takes: Iterable[Take]) -> Iterable[Take]:
         return (take for take in takes if self[take.row_id].valid_spot(take.spot))
@@ -92,65 +147,12 @@ class Grid(tuple[Row, Row, Row, Row]):
         return sum(len(row.marks) for row in self)
 
 
-@dataclass(frozen=True)
-class Die:
-    color: Color
-    face: int = field(default_factory=lambda: randrange(1, 7))
-
-    def __add__(self, other) -> int:
-        return self.face + other
-
-    def __radd__(self, other) -> int:
-        return other + self.face
-
-    def __str__(self):
-        return f'{self.color}{self.face}'
-
-
-class Dice(tuple[Die, ...]):
-    NON_GRID_COLORS = (Color.WHITE, Color.WHITE)
-    COLORS = NON_GRID_COLORS + Grid.COLORS
-
-    @classmethod
-    def roll(cls, locked: Container[int] = ()) -> Dice:
-        return Dice([Die(c) for c in cls.COLORS if c not in locked])
-
-    def table_takes(self) -> Iterable[Take]:
-        total = sum(self[:(len(self.NON_GRID_COLORS))])
-        return tuple((Take(i, total)) for i, _ in enumerate(Grid.COLORS))
-
-    def roller_takes(self) -> Iterable[Take]:
-        color_map = {c: i for i, c in enumerate(Grid.COLORS)}
-        n = self.NON_GRID_COLORS
-        for w, c in zip(self[:n], self[n:]):
-            yield Take(color_map[c], w + c)
-
-
-@dataclass(frozen=True)
-class Take:
-    row_id: int
-    spot: int
-
-    @classmethod
-    def from_string(cls, s: str) -> Take:
-        try:
-            return cls(Color(s[0]), int(s[1:]))
-        except (KeyError, IndexError, ValueError):
-            raise ValueError
-
-    def __str__(self):
-        return f"{Grid.COLORS[self.row_id]}{self.spot}"
-
-
-Move = Optional[Take]
-
-
 @dataclass
 class Card:
     grid: Grid = field(default_factory=Grid)
     penalties: int = 0
-    PENALTY_LIMIT: ClassVar[Literal[4]] = 4
-    PENALTY_POINTS: ClassVar[Literal[5]] = 5
+    PENALTY_LIMIT: Final[ClassVar[int]] = 4
+    PENALTY_POINTS: Final[ClassVar[int]] = 5
 
     def __str__(self):
         penalties = ' ' * 31 + 'X' * self.penalties + 'O' * (self.PENALTY_LIMIT - self.penalties)
@@ -186,6 +188,7 @@ class HumanPlayer(Player):
         self.name = name
 
     def take_turn(self, card: Card, dice: Dice, turns_to_roller: int, moves: Iterable[Move]) -> Move:
+        moves = set(moves)
         print('\n' * 10)
         print(self.name)
         print(card)
@@ -261,5 +264,6 @@ class Game:
         while not is_over:
             is_over = self.do_round()
         return self.scores()
+
 
 # print(Game((HumanPlayer('Mars'), HumanPlayer('Travis'))).play())
