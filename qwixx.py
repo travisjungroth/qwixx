@@ -2,11 +2,13 @@
 Great explanation of the rules: https://www.youtube.com/watch?v=ZAspNiPAUEE
 
 The logic of the game is encoded below, but here's a brief overview:
-The player with the highest score at the end of the game is the winner. Each player has a scorecard they mark off. Players take turns rolling the dice.
-When rolling, a player can take one or two certain combinations of the dice or a penalty. Other players can optionally take one combination.
-The game is over when two rows of the card are "locked" or a player has four penalties. The scores are calculated by summing the marked spots on the cards.
+The player with the highest score at the end of the game is the winner. Each player has a scorecard they mark off.
+Players take turns rolling the dice. When rolling, a player can take one or two certain combinations of the dice or
+a penalty. Other players can optionally take one combination. The game is over when two rows of the card are "locked" or
+a player has four penalties. The scores are calculated by summing the marked spots on the cards.
 
-Score card (essential for understanding classes!): https://i.pinimg.com/originals/1c/e8/e7/1ce8e79e2d1121c1bd2f3089200cbe42.jpg
+Score card (essential for understanding classes!):
+https://i.pinimg.com/originals/1c/e8/e7/1ce8e79e2d1121c1bd2f3089200cbe42.jpg
 """
 
 from __future__ import annotations
@@ -259,6 +261,5 @@ class Game:
         while not is_over:
             is_over = self.do_round()
         return self.scores()
-
 
 # print(Game((HumanPlayer('Mars'), HumanPlayer('Travis'))).play())
