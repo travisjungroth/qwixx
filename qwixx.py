@@ -273,4 +273,4 @@ class Game:
         return self.scores()
 
 
-print(Game((HumanPlayer('Mars'), HumanPlayer('Travis'))).play())
+# print(Game((HumanPlayer('Mars'), HumanPlayer('Travis'))).play())
