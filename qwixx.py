@@ -130,7 +130,12 @@ class Row:
 
 
 class Grid(tuple[Row, Row, Row, Row]):
-    SPOTS: Final[tuple[range, ...]] = (range(2, 13), range(2, 13), range(12, 1, -1), range(12, 1, -1))
+    SPOTS: Final[tuple[range, ...]] = (
+        (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
+        (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
+        (12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2),
+        (12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2),
+    )
     SCORES: Final[tuple[int, ...]] = tuple(accumulate(range(13)))
 
     def __new__(cls) -> Grid:
