@@ -72,6 +72,7 @@ class Dice(tuple[Die, ...]):
 
 @dataclass(frozen=True)
 class Take:
+    """Taking some combination of dice to mark a spot."""
     row_id: int
     spot: int
 
@@ -88,14 +89,14 @@ class Take:
         return f"{ROW_COLORS[self.row_id]}{self.spot}"
 
 
-Move = Optional[Take]
+Move = Optional[Take]  # It's always a move to take dice or not
 
 
 @dataclass
 class Row:
     spots: tuple[int, ...]
     marks: list[int] = field(default_factory=list)
-    LOCK_REQUIRES: Final[int] = 5
+    LOCK_REQUIRES: Final[int] = 5  # Spots you need to mark before you can mark the final row and lock it.
 
     def __str__(self) -> str:
         line = []
